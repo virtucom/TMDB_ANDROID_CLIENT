@@ -68,7 +68,45 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/tv_movie_overview"
                 android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Trailers"
+                android:textColor="@android:color/black" />
+
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/recyclerview_trailers"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
         </LinearLayout>
+
     </ScrollView>
+
+    <TextView
+        android:id="@+id/tv_error_message_display_detail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="@string/error_message"
+        android:textSize="20sp"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/tv_connection_error_message_display_detail"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="@string/connection_error_message"
+        android:textSize="20sp"
+        android:visibility="invisible" />
+
+    <ProgressBar
+        android:id="@+id/pb_loading_indicator_detail"
+        android:layout_height="42dp"
+        android:layout_width="42dp"
+        android:layout_gravity="center"
+        android:visibility="invisible" />
 
 </LinearLayout>

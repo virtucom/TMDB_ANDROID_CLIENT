@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.edudevel.udacity.aadft_p1.model.Movie;
+import com.edudevel.udacity.aadft_p1.model.Video;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -17,7 +18,8 @@ import java.util.ArrayList;
 
 public final class MoviesJsonUtils {
 
-    private static final String DEBUG_TAG = "MoviesJsonUtils";
+    private static final String DEBUG_TAG_MOVIES = "MoviesJsonUtils";
+    private static final String DEBUG_TAG_VIDEOS = "VideosJsonUtils";
 
     public static ArrayList<Movie> getMoviesFromJson(Context context, String moviesJsonStr)
             throws JSONException {
@@ -40,10 +42,37 @@ public final class MoviesJsonUtils {
             }
         } catch (JSONException e) {
             System.err.println(e);
-            Log.d(DEBUG_TAG, "Error parsing JSON. String was: " + moviesJsonStr);
+            Log.d(DEBUG_TAG_MOVIES, "Error parsing JSON. String was: " + moviesJsonStr);
         }
         return results;
 
+    }
+
+    public static ArrayList<Video> getVideosFromJson(Context context, String videosJsonStr)
+            throws JSONException {
+
+        ArrayList<Video> results = new ArrayList<Video>();
+        try {
+            JSONObject jsonObject = new JSONObject(videosJsonStr);
+            JSONArray array = (JSONArray) jsonObject.get("results");
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject jsonVideoObject = array.getJSONObject(i);
+                Video video = new Video();
+                video.setId(jsonVideoObject.getString("id"));
+                video.setSize(Integer.parseInt(jsonVideoObject.getString("size")));
+                video.setIso_639_1(jsonVideoObject.getString("iso_639_1"));
+                video.setIso_3166_1(jsonVideoObject.getString("iso_3166_1"));
+                video.setKey(jsonVideoObject.getString("key"));
+                video.setName(jsonVideoObject.getString("name"));
+                video.setSite(jsonVideoObject.getString("site"));
+                video.setType(jsonVideoObject.getString("type"));
+                results.add(video);
+            }
+        } catch (JSONException e) {
+            System.err.println(e);
+            Log.d(DEBUG_TAG_VIDEOS, "Error parsing JSON. String was: " + videosJsonStr);
+        }
+        return results;
 
     }
 }

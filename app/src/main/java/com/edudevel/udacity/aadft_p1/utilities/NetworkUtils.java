@@ -30,20 +30,27 @@ public final class NetworkUtils {
         Uri builtUri = Uri.parse(TMDB_BASE + "/" + orderPreference).buildUpon()
                 .appendQueryParameter(QUERY_PARAM, API_KEY).build();
 
-        URL url = null;
-        try {
-            url = new URL(builtUri.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-
-        return url;
+        return createUrl(builtUri);
     }
 
     public static Uri buildImageUrl(String posterPath) {
         Uri builtUri = Uri.parse(IMAGE_BASE + "/" + posterPath).buildUpon().build();
 
         return builtUri;
+    }
+
+    public static URL buildVideosUrl(String id) {
+        Uri builtUri = Uri.parse(TMDB_BASE + "/" + id + "/videos").buildUpon()
+                .appendQueryParameter(QUERY_PARAM, API_KEY).build();
+
+        return createUrl(builtUri);
+    }
+
+    public static URL buildReviewsUrl(String id) {
+        Uri builtUri = Uri.parse(TMDB_BASE + "/" + id + "/reviews").buildUpon()
+                .appendQueryParameter(QUERY_PARAM, API_KEY).build();
+
+        return createUrl(builtUri);
     }
 
     public static String getResponseFromHttpUrl(URL url) throws IOException {
@@ -63,5 +70,16 @@ public final class NetworkUtils {
         } finally {
             urlConnection.disconnect();
         }
+    }
+
+    private static URL createUrl(Uri builtUri) {
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+
+        return url;
     }
 }

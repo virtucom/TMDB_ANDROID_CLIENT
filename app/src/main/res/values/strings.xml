@@ -9,4 +9,5 @@
     </string>
     <string name="action_order_popular">Most Popular</string>
     <string name="action_order_top_rated">Top Rated</string>
+    <string name="content_authority">com.edudevel.udacity.aadft_p1</string>
 </resources>
