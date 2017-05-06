@@ -193,5 +193,9 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         @Override
     public void onClick(Video selectedVideo) {
 
+            Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("http://www.youtube.com/watch?v=" + selectedVideo.getKey()));
+            startActivity(intent);
+
     }
 }
