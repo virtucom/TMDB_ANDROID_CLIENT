@@ -1,6 +1,7 @@
 package com.edudevel.udacity.aadft_p1;
 
 import android.app.Activity;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -13,7 +14,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -65,7 +65,6 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
             FavoritesContract.FavoritesEntry.MOVIE_ID
     };
     private static final int ID_FAVORITE_LOADER = 101;
-    private Uri mUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,24 +145,6 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
             }
         }
 
-        Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
-        uri.buildUpon().appendPath(Integer.toString(mMovie.getId())).build();
-
-        Cursor data = getContentResolver().query(uri, new String[]{FavoritesContract.FavoritesEntry.MOVIE_ID},
-                null, null, null);
-
-        boolean cursorHasValidData = false;
-        if (data != null && data.moveToFirst()) {
-            cursorHasValidData = true;
-            mFavorite.setImageResource(android.R.drawable.star_on);
-            isFavorite = true;
-        }
-
-        if (!cursorHasValidData) {
-            mFavorite.setImageResource(android.R.drawable.star_off);
-            isFavorite = false;
-        }
-
         getSupportLoaderManager().initLoader(ID_FAVORITE_LOADER, null, this);
     }
 
@@ -176,21 +157,32 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
             @Override
             public void onClick(View arg0) {
 
-                Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
-                uri.buildUpon().appendPath(Integer.toString(mMovie.getId())).build();
+                Uri uri = ContentUris.withAppendedId(FavoritesContract.FavoritesEntry.CONTENT_URI, mMovie.getId());
 
                 if(isFavorite) {
-                    getContentResolver().delete(uri,null,null);
-                    isFavorite = false;
+                    try {
+                        getContentResolver().delete(uri,null,null);
+                        isFavorite = false;
+                    }catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                 }else {
                     ContentValues contentValues = new ContentValues();
                     contentValues.put(FavoritesContract.FavoritesEntry.MOVIE_ID, mMovie.getId());
 
-                    Uri insertUri = getContentResolver().insert(FavoritesContract.FavoritesEntry.CONTENT_URI, contentValues);
+                    try {
+                        Uri insertUri = getContentResolver().insert(FavoritesContract.FavoritesEntry.CONTENT_URI, contentValues);
 
-                    if(uri != null) {
-                        isFavorite = true;
+                        insertUri.getAuthority();
+
+                        if(uri != null) {
+                            isFavorite = true;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
+
                 }
 
                 getSupportLoaderManager().restartLoader(ID_FAVORITE_LOADER, null, DetailActivity.this);
@@ -224,12 +216,12 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
         return new AsyncTaskLoader<Cursor>(this) {
 
-            Cursor mTaskData = null;
+            Cursor mFavoriteData = null;
 
             @Override
             protected void onStartLoading() {
-                if (mTaskData != null) {
-                    deliverResult(mTaskData);
+                if (mFavoriteData != null) {
+                    deliverResult(mFavoriteData);
                 } else {
                     forceLoad();
                 }
@@ -239,11 +231,40 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
             public Cursor loadInBackground() {
 
                 try {
-                    return getContentResolver().query(FavoritesContract.FavoritesEntry.CONTENT_URI,
-                            null,
-                            null,
-                            null,
-                            FavoritesContract.FavoritesEntry.MOVIE_ID);
+
+                    Uri uri = ContentUris.withAppendedId(FavoritesContract.FavoritesEntry.CONTENT_URI, mMovie.getId());
+
+                    Cursor data = null;
+
+                    try {
+                        data = getContentResolver().query(uri, null, null, null, null);
+                    }catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    boolean cursorHasValidData = false;
+                    if (data != null && data.moveToFirst()) {
+                        cursorHasValidData = true;
+                        runOnUiThread(new Runnable() {
+                              public void run() {
+                                  mFavorite.setImageResource(android.R.drawable.star_on);
+                              }
+                          });
+
+                        isFavorite = true;
+                    }
+
+                    if (!cursorHasValidData) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                mFavorite.setImageResource(android.R.drawable.star_off);
+                            }
+                        });
+
+                        isFavorite = false;
+                    }
+
+                    return data;
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -253,7 +274,7 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
             // deliverResult sends the result of the load, a Cursor, to the registered listener
             public void deliverResult(Cursor data) {
-                mTaskData = data;
+                mFavoriteData = data;
                 super.deliverResult(data);
             }
 

@@ -7,6 +7,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -52,42 +53,23 @@ public class FavoritesProvider extends ContentProvider {
 
         Cursor cursor;
 
-        switch (sUriMatcher.match(uri)) {
+        final SQLiteDatabase db = mFavoritesDbHelper.getReadableDatabase();
 
-            case FAVORITES:
-                cursor = mFavoritesDbHelper.getReadableDatabase().query(
-                        FavoritesContract.FavoritesEntry.TABLE_NAME,
-                        projection,
-                        selection,
-                        selectionArgs,
-                        null,
-                        null,
-                        sortOrder);
+        String id = uri.getPathSegments().get(1);
 
-                break;
+        String mSelection = FavoritesContract.FavoritesEntry.MOVIE_ID + " = ?";
+        String[] mSelectionArgs = new String[]{id};
 
-            case FAVORITES_WITH_ID:
+        cursor = db.query(
+                FavoritesContract.FavoritesEntry.TABLE_NAME,
+                projection,
+                mSelection,
+                mSelectionArgs,
+                null,
+                null,
+                sortOrder);
 
-                String id = uri.getPathSegments().get(1);
-
-                String mSelection = "_id=?";
-                String[] mSelectionArgs = new String[]{id};
-
-                cursor = mFavoritesDbHelper.getReadableDatabase().query(
-                        FavoritesContract.FavoritesEntry.TABLE_NAME,
-                        projection,
-                        selection,
-                        selectionArgs,
-                        null,
-                        null,
-                        sortOrder);
-
-            default:
-                throw new UnsupportedOperationException("Unknown uri: " + uri);
-
-        }
-
-        return null;
+        return cursor;
     }
 
     @Nullable
@@ -102,25 +84,15 @@ public class FavoritesProvider extends ContentProvider {
 
         Uri returnUri;
 
-        switch (sUriMatcher.match(uri)) {
+        long id = mFavoritesDbHelper.getWritableDatabase().insert(
+                FavoritesContract.FavoritesEntry.TABLE_NAME, null, values);
 
-            case FAVORITES:
-                long id = mFavoritesDbHelper.getWritableDatabase().insert(
-                        FavoritesContract.FavoritesEntry.TABLE_NAME, null, values);
+        if (id > 0) {
 
-                if (id > 0) {
+            returnUri = ContentUris.withAppendedId(FavoritesContract.FavoritesEntry.CONTENT_URI, id);
 
-                    returnUri = ContentUris.withAppendedId(FavoritesContract.FavoritesEntry.CONTENT_URI, id);
-
-                } else {
-                    throw new android.database.SQLException("Failed to inser row into " + uri);
-                }
-
-                break;
-
-            default:
-                throw new UnsupportedOperationException("Unknown uri: " + uri);
-
+        } else {
+            throw new android.database.SQLException("Failed to inser row into " + uri);
         }
 
         getContext().getContentResolver().notifyChange(uri, null);
@@ -131,20 +103,15 @@ public class FavoritesProvider extends ContentProvider {
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
 
+        final SQLiteDatabase db = mFavoritesDbHelper.getWritableDatabase();
+
         int numRowsDeleted = 0;
 
-        if (null == selection) selection = "1";
+        String mSelection = FavoritesContract.FavoritesEntry.MOVIE_ID + " = ?";
 
-        switch (sUriMatcher.match(uri)) {
+        String id = uri.getPathSegments().get(1);
 
-            case FAVORITES_WITH_ID:
-                numRowsDeleted = mFavoritesDbHelper.getWritableDatabase().delete(
-                        FavoritesContract.FavoritesEntry.TABLE_NAME,
-                        selection,
-                        selectionArgs);
-
-                break;
-        }
+        numRowsDeleted = db.delete(FavoritesContract.FavoritesEntry.TABLE_NAME, mSelection, new String[]{id});
 
         if (numRowsDeleted != 0) {
             getContext().getContentResolver().notifyChange(uri, null);
