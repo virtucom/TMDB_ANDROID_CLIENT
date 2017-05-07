@@ -54,7 +54,7 @@ public class FavoritesProvider extends ContentProvider {
 
         switch (sUriMatcher.match(uri)) {
 
-            case FAVORITES: {
+            case FAVORITES:
                 cursor = mFavoritesDbHelper.getReadableDatabase().query(
                         FavoritesContract.FavoritesEntry.TABLE_NAME,
                         projection,
@@ -65,7 +65,22 @@ public class FavoritesProvider extends ContentProvider {
                         sortOrder);
 
                 break;
-            }
+
+            case FAVORITES_WITH_ID:
+
+                String id = uri.getPathSegments().get(1);
+
+                String mSelection = "_id=?";
+                String[] mSelectionArgs = new String[]{id};
+
+                cursor = mFavoritesDbHelper.getReadableDatabase().query(
+                        FavoritesContract.FavoritesEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
 
             default:
                 throw new UnsupportedOperationException("Unknown uri: " + uri);

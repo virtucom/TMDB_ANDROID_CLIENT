@@ -1,25 +1,32 @@
 package com.edudevel.udacity.aadft_p1;
 
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Point;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.edudevel.udacity.aadft_p1.data.FavoritesContract;
 import com.edudevel.udacity.aadft_p1.model.Movie;
 import com.edudevel.udacity.aadft_p1.model.Video;
 import com.edudevel.udacity.aadft_p1.utilities.MoviesJsonUtils;
@@ -32,17 +39,20 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 
-public class DetailActivity extends AppCompatActivity implements VideoAdapter.VideoAdapterOnClickHandler{
+public class DetailActivity extends AppCompatActivity implements VideoAdapter.VideoAdapterOnClickHandler, LoaderManager.LoaderCallbacks<Cursor> {
 
     private int screenWidth;
 
     private Movie mMovie;
     private TextView mTitle;
     private ImageView mPoster;
+    private ImageView mFavorite;
     private TextView mRelease;
     private TextView mAverage;
     private TextView mOverview;
     private RecyclerView mRecyclerView;
+
+    private boolean isFavorite;
 
     private VideoAdapter mVideoAdapter;
 
@@ -50,6 +60,12 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private TextView mConnectionErrorMessageDisplay;
 
     private ProgressBar mLoadingIndicator;
+
+    public static final String[] FAVORITES_PROJECTION = {
+            FavoritesContract.FavoritesEntry.MOVIE_ID
+    };
+    private static final int ID_FAVORITE_LOADER = 101;
+    private Uri mUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +77,8 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         mRelease = (TextView) findViewById(R.id.tv_movie_release);
         mAverage = (TextView) findViewById(R.id.tv_movie_average);
         mOverview = (TextView) findViewById(R.id.tv_movie_overview);
+
+        addListenerOnFavorites();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview_trailers);
         mErrorMessageDisplay = (TextView) findViewById(R.id.tv_error_message_display_detail);
@@ -127,6 +145,60 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
             }
         }
+
+        Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
+        uri.buildUpon().appendPath(Integer.toString(mMovie.getId())).build();
+
+        Cursor data = getContentResolver().query(uri, new String[]{FavoritesContract.FavoritesEntry.MOVIE_ID},
+                null, null, null);
+
+        boolean cursorHasValidData = false;
+        if (data != null && data.moveToFirst()) {
+            cursorHasValidData = true;
+            mFavorite.setImageResource(android.R.drawable.star_on);
+            isFavorite = true;
+        }
+
+        if (!cursorHasValidData) {
+            mFavorite.setImageResource(android.R.drawable.star_off);
+            isFavorite = false;
+        }
+
+        getSupportLoaderManager().initLoader(ID_FAVORITE_LOADER, null, this);
+    }
+
+    public void addListenerOnFavorites() {
+
+        mFavorite = (ImageButton) findViewById(R.id.ib_favorite);
+
+        mFavorite.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View arg0) {
+
+                Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
+                uri.buildUpon().appendPath(Integer.toString(mMovie.getId())).build();
+
+                if(isFavorite) {
+                    getContentResolver().delete(uri,null,null);
+                    isFavorite = false;
+                }else {
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(FavoritesContract.FavoritesEntry.MOVIE_ID, mMovie.getId());
+
+                    Uri insertUri = getContentResolver().insert(FavoritesContract.FavoritesEntry.CONTENT_URI, contentValues);
+
+                    if(uri != null) {
+                        isFavorite = true;
+                    }
+                }
+
+                getSupportLoaderManager().restartLoader(ID_FAVORITE_LOADER, null, DetailActivity.this);
+
+            }
+
+        });
+
     }
 
     // From StackOverflow http://stackoverflow.com/questions/1560788/how-to-check-internet-access-on-android-inetaddress-never-times-out
@@ -145,6 +217,70 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private void showVideosDataView() {
         mErrorMessageDisplay.setVisibility(View.INVISIBLE);
         mRecyclerView.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int loaderId, Bundle loaderArgs) {
+
+        return new AsyncTaskLoader<Cursor>(this) {
+
+            Cursor mTaskData = null;
+
+            @Override
+            protected void onStartLoading() {
+                if (mTaskData != null) {
+                    deliverResult(mTaskData);
+                } else {
+                    forceLoad();
+                }
+            }
+
+            @Override
+            public Cursor loadInBackground() {
+
+                try {
+                    return getContentResolver().query(FavoritesContract.FavoritesEntry.CONTENT_URI,
+                            null,
+                            null,
+                            null,
+                            FavoritesContract.FavoritesEntry.MOVIE_ID);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+
+            // deliverResult sends the result of the load, a Cursor, to the registered listener
+            public void deliverResult(Cursor data) {
+                mTaskData = data;
+                super.deliverResult(data);
+            }
+
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
+        boolean cursorHasValidData = false;
+        if (data != null && data.moveToFirst()) {
+            cursorHasValidData = true;
+            mFavorite.setImageResource(android.R.drawable.star_on);
+        }
+
+        if (!cursorHasValidData) {
+            mFavorite.setImageResource(android.R.drawable.star_off);
+            return;
+        }
+
+
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
     }
 
     public class MovieQueryTask extends AsyncTask<URL, Void, ArrayList<Video>> {
