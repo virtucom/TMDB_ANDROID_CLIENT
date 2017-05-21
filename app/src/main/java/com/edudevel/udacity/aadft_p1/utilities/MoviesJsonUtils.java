@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.edudevel.udacity.aadft_p1.model.Movie;
+import com.edudevel.udacity.aadft_p1.model.Review;
 import com.edudevel.udacity.aadft_p1.model.Video;
 
 import org.json.JSONArray;
@@ -20,6 +21,7 @@ public final class MoviesJsonUtils {
 
     private static final String DEBUG_TAG_MOVIES = "MoviesJsonUtils";
     private static final String DEBUG_TAG_VIDEOS = "VideosJsonUtils";
+    private static final String DEBUG_TAG_REVIEWS = "ReviewsJsonUtils";
 
     public static ArrayList<Movie> getMoviesFromJson(Context context, String moviesJsonStr)
             throws JSONException {
@@ -48,6 +50,28 @@ public final class MoviesJsonUtils {
 
     }
 
+    public static Movie getMovieFromJson(Context context, String movieJsonStr)
+            throws JSONException {
+
+        Movie movie = new Movie();
+
+        try {
+            JSONObject jsonMovieObject = new JSONObject(movieJsonStr);
+            movie.setId(Integer.parseInt(jsonMovieObject.getString("id")));
+            movie.setTitle(jsonMovieObject.getString("title"));
+            movie.setPopularity(jsonMovieObject.getString("popularity"));
+            movie.setPosterPath(jsonMovieObject.getString("poster_path"));
+            movie.setReleaseDate(jsonMovieObject.getString("release_date"));
+            movie.setOverview(jsonMovieObject.getString("overview"));
+            movie.setVote_average(jsonMovieObject.getString("vote_average"));
+        } catch (JSONException e) {
+            System.err.println(e);
+            Log.d(DEBUG_TAG_MOVIES, "Error parsing JSON. String was: " + movieJsonStr);
+        }
+        return movie;
+
+    }
+
     public static ArrayList<Video> getVideosFromJson(Context context, String videosJsonStr)
             throws JSONException {
 
@@ -71,6 +95,30 @@ public final class MoviesJsonUtils {
         } catch (JSONException e) {
             System.err.println(e);
             Log.d(DEBUG_TAG_VIDEOS, "Error parsing JSON. String was: " + videosJsonStr);
+        }
+        return results;
+
+    }
+
+    public static ArrayList<Review> getReviewsFromJson(Context context, String reviewsJsonStr)
+            throws JSONException {
+
+        ArrayList<Review> results = new ArrayList<Review>();
+        try {
+            JSONObject jsonObject = new JSONObject(reviewsJsonStr);
+            JSONArray array = (JSONArray) jsonObject.get("results");
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject jsonReviewObject = array.getJSONObject(i);
+                Review review = new Review();
+                review.setId(jsonReviewObject.getString("id"));
+                review.setAuthor(jsonReviewObject.getString("author"));
+                review.setContent(jsonReviewObject.getString("content"));
+                review.setUrl(jsonReviewObject.getString("url"));
+                results.add(review);
+            }
+        } catch (JSONException e) {
+            System.err.println(e);
+            Log.d(DEBUG_TAG_REVIEWS, "Error parsing JSON. String was: " + reviewsJsonStr);
         }
         return results;
 

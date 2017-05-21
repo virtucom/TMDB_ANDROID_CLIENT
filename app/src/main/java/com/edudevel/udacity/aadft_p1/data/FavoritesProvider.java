@@ -32,7 +32,7 @@ public class FavoritesProvider extends ContentProvider {
         final String path = FavoritesContract.PATH_FAVORITES;
 
         matcher.addURI(authority, path, FAVORITES);
-        matcher.addURI(authority, path + "/#", FAVORITES_WITH_ID);
+        matcher.addURI(authority, path + "/*", FAVORITES_WITH_ID);
 
         return matcher;
 
@@ -51,23 +51,42 @@ public class FavoritesProvider extends ContentProvider {
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
 
-        Cursor cursor;
+        Cursor cursor = null;
 
         final SQLiteDatabase db = mFavoritesDbHelper.getReadableDatabase();
 
-        String id = uri.getPathSegments().get(1);
+        int match = sUriMatcher.match(uri);
 
-        String mSelection = FavoritesContract.FavoritesEntry.MOVIE_ID + " = ?";
-        String[] mSelectionArgs = new String[]{id};
+        switch (match) {
+            case FAVORITES:
+                cursor = db.query(
+                        FavoritesContract.FavoritesEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder);
 
-        cursor = db.query(
-                FavoritesContract.FavoritesEntry.TABLE_NAME,
-                projection,
-                mSelection,
-                mSelectionArgs,
-                null,
-                null,
-                sortOrder);
+                break;
+
+            case FAVORITES_WITH_ID:
+                String id = uri.getPathSegments().get(1);
+
+                String mSelection = FavoritesContract.FavoritesEntry.MOVIE_ID + " = ?";
+                String[] mSelectionArgs = new String[]{id};
+
+                cursor = db.query(
+                        FavoritesContract.FavoritesEntry.TABLE_NAME,
+                        projection,
+                        mSelection,
+                        mSelectionArgs,
+                        null,
+                        null,
+                        sortOrder);
+                break;
+
+        }
 
         return cursor;
     }

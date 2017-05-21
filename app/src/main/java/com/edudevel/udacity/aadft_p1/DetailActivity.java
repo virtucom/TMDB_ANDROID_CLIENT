@@ -28,6 +28,7 @@ import android.widget.TextView;
 
 import com.edudevel.udacity.aadft_p1.data.FavoritesContract;
 import com.edudevel.udacity.aadft_p1.model.Movie;
+import com.edudevel.udacity.aadft_p1.model.Review;
 import com.edudevel.udacity.aadft_p1.model.Video;
 import com.edudevel.udacity.aadft_p1.utilities.MoviesJsonUtils;
 import com.edudevel.udacity.aadft_p1.utilities.NetworkUtils;
@@ -50,11 +51,13 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private TextView mRelease;
     private TextView mAverage;
     private TextView mOverview;
-    private RecyclerView mRecyclerView;
+    private RecyclerView mRecyclerView_trailers;
+    private RecyclerView mRecyclerView_reviews;
 
     private boolean isFavorite;
 
     private VideoAdapter mVideoAdapter;
+    private ReviewAdapter mReviewAdapter;
 
     private TextView mErrorMessageDisplay;
     private TextView mConnectionErrorMessageDisplay;
@@ -79,7 +82,8 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
         addListenerOnFavorites();
 
-        mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview_trailers);
+        mRecyclerView_trailers = (RecyclerView) findViewById(R.id.recyclerview_trailers);
+        mRecyclerView_reviews = (RecyclerView) findViewById(R.id.recyclerview_reviews);
         mErrorMessageDisplay = (TextView) findViewById(R.id.tv_error_message_display_detail);
         mConnectionErrorMessageDisplay = (TextView) findViewById(R.id.tv_connection_error_message_display_detail);
 
@@ -116,25 +120,31 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
                     Context context = this;
 
-                    GridLayoutManager layoutManager
+                    GridLayoutManager layoutManagerVideos
+                            = new GridLayoutManager(context, 1);
+                    GridLayoutManager layoutManagerReviews
                             = new GridLayoutManager(context, 1);
 
-                    mRecyclerView.setHasFixedSize(true);
+                    mRecyclerView_trailers.setHasFixedSize(true);
+                    mRecyclerView_reviews.setHasFixedSize(true);
 
-                    mRecyclerView.setLayoutManager(layoutManager);
+                    mRecyclerView_trailers.setLayoutManager(layoutManagerVideos);
+                    mRecyclerView_reviews.setLayoutManager(layoutManagerReviews);
 
                     VideoAdapter.VideoAdapterOnClickHandler videoAdapterOnClickHandler = this;
 
                     mVideoAdapter = new VideoAdapter(activity, videoAdapterOnClickHandler);
+                    mReviewAdapter = new ReviewAdapter(activity);
 
-                    mRecyclerView.setAdapter(mVideoAdapter);
+                    mRecyclerView_trailers.setAdapter(mVideoAdapter);
+                    mRecyclerView_reviews.setAdapter(mReviewAdapter);
 
                     mLoadingIndicator = (ProgressBar) findViewById(R.id.pb_loading_indicator_detail);
 
                     showVideosDataView();
 
-                    new MovieQueryTask(this).execute(videosUri);
-                    //new MovieQueryTask(this).execute(reviewsUri);
+                    new VideoQueryTask(this).execute(videosUri);
+                    new ReviewQueryTask(this).execute(reviewsUri);
 
 
                 } else {
@@ -202,13 +212,14 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     }
 
     private void showConnectionErrorMessage() {
-        mRecyclerView.setVisibility(View.INVISIBLE);
+        mRecyclerView_trailers.setVisibility(View.INVISIBLE);
         mConnectionErrorMessageDisplay.setVisibility(View.VISIBLE);
     }
 
     private void showVideosDataView() {
         mErrorMessageDisplay.setVisibility(View.INVISIBLE);
-        mRecyclerView.setVisibility(View.VISIBLE);
+        mRecyclerView_trailers.setVisibility(View.VISIBLE);
+        mRecyclerView_reviews.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -304,11 +315,11 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
     }
 
-    public class MovieQueryTask extends AsyncTask<URL, Void, ArrayList<Video>> {
+    public class VideoQueryTask extends AsyncTask<URL, Void, ArrayList<Video>> {
 
         private Context mContext;
 
-        public MovieQueryTask(Context context) {
+        public VideoQueryTask(Context context) {
             mContext = context;
         }
 
@@ -341,6 +352,49 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
             if (videosData != null) {
                 showVideosDataView();
                 mVideoAdapter.setVideosData(videosData);
+            } else {
+                showConnectionErrorMessage();
+            }
+        }
+    }
+
+    public class ReviewQueryTask extends AsyncTask<URL, Void, ArrayList<Review>> {
+
+        private Context mContext;
+
+        public ReviewQueryTask(Context context) {
+            mContext = context;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mLoadingIndicator.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected ArrayList<Review> doInBackground(URL... params) {
+            ArrayList<Review> mReview = null;
+            try {
+                String jsonResponse = NetworkUtils
+                        .getResponseFromHttpUrl(params[0]);
+
+                mReview = MoviesJsonUtils.getReviewsFromJson(mContext, jsonResponse);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return mReview;
+        }
+
+        @Override
+        protected void onPostExecute(ArrayList<Review> reviewsData) {
+            mLoadingIndicator.setVisibility(View.INVISIBLE);
+            if (reviewsData != null) {
+                showVideosDataView();
+                mReviewAdapter.setReviewsData(reviewsData);
             } else {
                 showConnectionErrorMessage();
             }

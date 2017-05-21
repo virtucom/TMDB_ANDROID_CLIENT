@@ -1,13 +1,18 @@
 package com.edudevel.udacity.aadft_p1;
 
 import android.app.Activity;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.preference.PreferenceManager;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
@@ -18,6 +23,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.edudevel.udacity.aadft_p1.data.FavoritesContract;
 import com.edudevel.udacity.aadft_p1.model.Movie;
 import com.edudevel.udacity.aadft_p1.utilities.MoviesJsonUtils;
 import com.edudevel.udacity.aadft_p1.utilities.NetworkUtils;
@@ -36,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
     private TextView mConnectionErrorMessageDisplay;
 
     private ProgressBar mLoadingIndicator;
+    private boolean show_favorites;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +73,17 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
 
             mLoadingIndicator = (ProgressBar) findViewById(R.id.pb_loading_indicator);
 
-            loadMovieData("popular");
+            SharedPreferences sharedPreferences =
+                    PreferenceManager.getDefaultSharedPreferences(this);
+
+            show_favorites = sharedPreferences.getBoolean("show_favorites", false);
+
+            if(show_favorites) {
+                loadMovieData("favorites");
+            }else {
+                loadMovieData("popular");
+            }
+
         } else {
             showConnectionErrorMessage();
         }
@@ -100,6 +117,10 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
             return true;
         }else if(id == R.id.action_order_top_rated) {
             loadMovieData("top_rated");
+            return true;
+        }else if(id == R.id.action_settings) {
+            Intent startSettingsActivity = new Intent(this, SettingsActivity.class);
+            startActivity(startSettingsActivity);
             return true;
         }
 
@@ -147,21 +168,69 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
 
             String order = params[0];
 
-            URL movieRequestUrl = NetworkUtils.buildUrl(order);
+            if(order.equalsIgnoreCase("favorites")) {
 
-            try {
-                String jsonMovieResponse = NetworkUtils
-                        .getResponseFromHttpUrl(movieRequestUrl);
+                Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
+                Cursor data = null;
 
-                ArrayList<Movie> moviesData = MoviesJsonUtils
-                        .getMoviesFromJson(MainActivity.this, jsonMovieResponse);
+                try {
+                    data = getContentResolver().query(uri, null, null, null, null);
+                }catch (Exception e) {
+                    e.printStackTrace();
+                }
 
-                return moviesData;
+                if (data != null && data.moveToFirst()) {
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+                    ArrayList<String> favorites = new ArrayList<String>();
+
+                    while(!data.isAfterLast()) {
+                        favorites.add(data.getString(1));
+                        data.moveToNext();
+                    }
+
+                    ArrayList<Movie> moviesData = new ArrayList<Movie>();
+
+                    for (String favorite:favorites) {
+                        URL movieRequestUrl = NetworkUtils.buildSingleMovieUrl(favorite);
+
+                        try {
+                            String jsonMovieResponse = NetworkUtils
+                                    .getResponseFromHttpUrl(movieRequestUrl);
+
+                            Movie movieData = MoviesJsonUtils.getMovieFromJson(MainActivity.this, jsonMovieResponse);
+
+                            moviesData.add(movieData);
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    return moviesData;
+
+                }
+
+            }else {
+                URL movieRequestUrl = NetworkUtils.buildUrl(order);
+
+                try {
+                    String jsonMovieResponse = NetworkUtils
+                            .getResponseFromHttpUrl(movieRequestUrl);
+
+                    ArrayList<Movie> moviesData = MoviesJsonUtils
+                            .getMoviesFromJson(MainActivity.this, jsonMovieResponse);
+
+                    return moviesData;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
             }
+
+            return null;
+
+
         }
 
         @Override
@@ -194,6 +263,22 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
                 (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo netInfo = cm.getActiveNetworkInfo();
         return netInfo != null && netInfo.isConnectedOrConnecting();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        SharedPreferences sharedPreferences =
+                PreferenceManager.getDefaultSharedPreferences(this);
+
+        boolean new_show_favorites = sharedPreferences.getBoolean("show_favorites", false);
+
+        if(show_favorites != new_show_favorites) {
+
+            this.recreate();
+        }
+
     }
 
 }

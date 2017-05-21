@@ -33,6 +33,13 @@ public final class NetworkUtils {
         return createUrl(builtUri);
     }
 
+    public static URL buildSingleMovieUrl(String id) {
+        Uri builtUri = Uri.parse(TMDB_BASE + "/" + id).buildUpon()
+                .appendQueryParameter(QUERY_PARAM, API_KEY).build();
+
+        return createUrl(builtUri);
+    }
+
     public static Uri buildImageUrl(String posterPath) {
         Uri builtUri = Uri.parse(IMAGE_BASE + "/" + posterPath).buildUpon().build();
 
