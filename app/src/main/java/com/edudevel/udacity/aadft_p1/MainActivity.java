@@ -16,6 +16,7 @@ import android.support.v7.preference.PreferenceManager;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
+import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -44,9 +45,20 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
     private ProgressBar mLoadingIndicator;
     private boolean show_favorites;
 
+    private String selected_order = "popular";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        if(savedInstanceState != null) {
+            String savedOrder = savedInstanceState.getString("selected_order");
+            if(savedOrder != null) {
+                selected_order = savedOrder;
+            }
+
+        }
         setContentView(R.layout.activity_main);
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview_posters);
@@ -81,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
             if(show_favorites) {
                 loadMovieData("favorites");
             }else {
-                loadMovieData("popular");
+                loadMovieData(selected_order);
             }
 
         } else {
@@ -113,9 +125,11 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
         int id = item.getItemId();
 
         if (id == R.id.action_order_popular) {
-            loadMovieData("popular");
+            selected_order = "popular";
+            loadMovieData(selected_order);
             return true;
         }else if(id == R.id.action_order_top_rated) {
+            selected_order = "top_rated";
             loadMovieData("top_rated");
             return true;
         }else if(id == R.id.action_settings) {
@@ -276,9 +290,32 @@ public class MainActivity extends AppCompatActivity implements PosterAdapter.Pos
 
         if(show_favorites != new_show_favorites) {
 
-            this.recreate();
+            show_favorites = new_show_favorites;
+
+            if(show_favorites) {
+                loadMovieData("favorites");
+            }else {
+                loadMovieData(selected_order);
+            }
         }
 
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("selected_order", selected_order);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        String savedOrder = savedInstanceState.getString("selected_order");
+
+        if(savedInstanceState != null && savedOrder != null) {
+            selected_order = savedOrder;
+        }
     }
 
 }
